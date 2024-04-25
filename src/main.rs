@@ -1,54 +1,39 @@
+mod common;
+mod eventstore;
+mod querystore;
+mod db_sync;
 
 
-struct Event {
-    name: String,
-}
+use common::Event;
+use eventstore::{ListEventStore, EventStoreTrait};
+use querystore::{MapQueryStore};
+use db_sync::sync_querystore;
 
-
-struct ListEventStore {
-    events: Vec<Event>,
-}
-
-
-trait EventStoreTrait {
-
-    fn add_event(&mut self, event: Event);
-
-    fn get_events(&self) -> &Vec<Event>;
-
-    fn get_event_by_id(&self, _id: i32) -> Option<&Event> { None }
-
-}
-
-impl EventStoreTrait for ListEventStore {
-    fn add_event(&mut self, event: Event) {
-        self.events.push(event);
-    }
-
-    fn get_events(&self) -> &Vec<Event> {
-        &self.events
-    }
-
-    fn get_event_by_id(&self, _id: i32) -> Option<&Event> {
-        self.events.get(_id as usize)
-    }
-}
 
 fn main() {
-    let mut store: ListEventStore = ListEventStore { events: vec![] };
-    store.add_event(Event { name: "AgeAppendEvent".to_string() });
+    let mut event_store: ListEventStore = ListEventStore::new();
 
-    store.add_event(Event { name: "NameAppendEvent".to_string() });
+    let mut query_store: MapQueryStore = MapQueryStore::new();
 
-    let events = store.get_events();
-    for event   in events {
-        println!("{}", event.name); 
+    let defined_events = vec!(
+        Event { event_id: 1, name: "NameAppendEvent".to_string() },
+        Event { event_id: 2, name: "AgeAppendEvent".to_string() }
+    );
+
+    for event in defined_events {
+        event_store.add_event(event);
     }
 
-    let first_event: Option<&Event> = store.get_event_by_id(2);
 
-    if first_event.is_some() {
-        println!("{}", first_event.unwrap().name);
-    }
+    // let first_event: Option<&Event> = store.get_event_by_id(1);
+    // if first_event.is_some() {
+    //     println!("{}", first_event.unwrap().name);
+    // }
+    
+    sync_querystore(&mut event_store, &mut query_store);
+    
 
+   for item in query_store.data {
+       println!("Event {}: name: {}", item.0, item.1);
+   }
 }
